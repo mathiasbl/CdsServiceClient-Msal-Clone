@@ -18,6 +18,8 @@ namespace FunctionApp3
         {
             builder.Services.AddSingleton(sp =>
             {
+                TraceControlSettings.TraceLevel = System.Diagnostics.SourceLevels.All;
+                TraceControlSettings.AddTraceListener(new ConsoleTraceListener());
                 var connectionString = sp.GetRequiredService<IConfiguration>().GetValue<string>("CdsConnectionString");
 
                 var client = new CdsServiceClient(connectionString);
