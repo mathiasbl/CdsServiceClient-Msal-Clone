@@ -1,6 +1,7 @@
 ﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.PowerPlatform.Cds.Client;
 using Microsoft.Xrm.Sdk;
 using System;
@@ -18,16 +19,33 @@ namespace FunctionApp3
         {
             builder.Services.AddSingleton(sp =>
             {
-                TraceControlSettings.TraceLevel = System.Diagnostics.SourceLevels.All;
-                TraceControlSettings.AddTraceListener(new ConsoleTraceListener());
-                var connectionString = sp.GetRequiredService<IConfiguration>().GetValue<string>("CdsConnectionString");
+                var logger = sp.GetRequiredService<ILogger<Startup>>();
 
-                var client = new CdsServiceClient(connectionString);
+                return new Lazy<CdsServiceClient>(() =>
+                {
+                    logger.LogInformation("Connecting to CDS");
+                    var client = new CdsServiceClient(Environment.GetEnvironmentVariable("CdsServiceConnectionString"));
 
-                return client;
+                    if (client.IsReady)
+                    {
+                        logger.LogInformation("Connected to CDS...");
+                        return client;
+                    }
+                    else throw client.LastCdsException;
+                });
             });
 
-            builder.Services.AddScoped<IOrganizationService>(sp => sp.GetRequiredService<CdsServiceClient>().Clone());
+            builder.Services.AddScoped<IOrganizationService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<Startup>>();
+                var client = sp.GetRequiredService<Lazy<CdsServiceClient>>().Value;
+
+                logger.LogInformation("Cloning client");
+                var clone = client.Clone();
+                logger.LogInformation("Cloned client");
+
+                return clone;
+            });
         }
     }
 }
