@@ -17,35 +17,24 @@ namespace FunctionApp3
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            builder.Services.AddSingleton(sp =>
+            // setup connection
+            var client = GetClient();
+
+            builder.Services.AddSingleton(sp => new CdsServiceClientPool(client, sp.GetRequiredService<ILogger<CdsServiceClientPool>>()));
+            builder.Services.AddScoped<CdsServiceClientPool.Lease>();
+        }
+
+        private CdsServiceClient GetClient()
+        {
+            //TraceControlSettings.TraceLevel = System.Diagnostics.SourceLevels.All;
+            //TraceControlSettings.AddTraceListener(new ConsoleTraceListener());
+            var client = new CdsServiceClient(Environment.GetEnvironmentVariable("CdsServiceConnectionString"));
+            if (client.IsReady)
             {
-                var logger = sp.GetRequiredService<ILogger<Startup>>();
-
-                return new Lazy<CdsServiceClient>(() =>
-                {
-                    logger.LogInformation("Connecting to CDS");
-                    var client = new CdsServiceClient(Environment.GetEnvironmentVariable("CdsServiceConnectionString"));
-
-                    if (client.IsReady)
-                    {
-                        logger.LogInformation("Connected to CDS...");
-                        return client;
-                    }
-                    else throw client.LastCdsException;
-                });
-            });
-
-            builder.Services.AddScoped<IOrganizationService>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<Startup>>();
-                var client = sp.GetRequiredService<Lazy<CdsServiceClient>>().Value;
-
-                logger.LogInformation("Cloning client");
-                var clone = client.Clone();
-                logger.LogInformation("Cloned client");
-
-                return clone;
-            });
+                return client;
+            }
+            else
+                throw client.LastCdsException;
         }
     }
 }
