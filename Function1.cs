@@ -37,7 +37,7 @@ namespace FunctionApp3
         //}
 
         [FunctionName("accounts")]
-        public void Accounts([ServiceBusTrigger("sbt-entities-firstrun", "intersects", IsSessionsEnabled = true)] byte[] body,
+        public void Accounts([ServiceBusTrigger("foo")] byte[] body,
             string contentType,
             IDictionary<string, object> userProperties,
             string messageId)
